@@ -17,8 +17,14 @@ const SIDE_IDX = {
 export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, v: Math.min(a.v, b.v) });
 
-/** Angle at b, in degrees (0-180). */
+/** Angle at b, in degrees (0-180). Uses MediaPipe's 3D world coordinates when all three points
+ *  have them, so a joint reads the same even when you're not perfectly side-on to the camera. */
 export function ang(a, b, c) {
+  if (a.w && b.w && c.w) {
+    const ux = a.w.x - b.w.x, uy = a.w.y - b.w.y, uz = a.w.z - b.w.z, vx = c.w.x - b.w.x, vy = c.w.y - b.w.y, vz = c.w.z - b.w.z;
+    const d3 = Math.hypot(ux, uy, uz) * Math.hypot(vx, vy, vz);
+    if (d3) return Math.acos(Math.max(-1, Math.min(1, (ux * vx + uy * vy + uz * vz) / d3))) * 180 / Math.PI;
+  }
   const v1x = a.x - b.x, v1y = a.y - b.y, v2x = c.x - b.x, v2y = c.y - b.y;
   const d = Math.hypot(v1x, v1y) * Math.hypot(v2x, v2y);
   if (!d) return 180;
@@ -41,9 +47,10 @@ export function lineDev(a, m, c) {
 }
 
 /** Build a frame from raw landmarks (normalized 0-1) and the video's aspect ratio (w/h). */
-export function makeFrame(raw, aspect, t) {
+export function makeFrame(raw, aspect, t, world) {
   if (!raw || !raw.length) return { t, ok: false };
-  const P = raw.map(p => ({ x: p.x * aspect, y: p.y, v: p.visibility == null ? 1 : p.visibility, inX: p.x > 0.01 && p.x < 0.99, inY: p.y > 0.01 && p.y < 0.99 }));
+  const W = world && world.length === raw.length ? world : null;
+  const P = raw.map((p, i) => ({ x: p.x * aspect, y: p.y, v: p.visibility == null ? 1 : p.visibility, inX: p.x > 0.005 && p.x < 0.995, inY: p.y > 0.005 && p.y < 0.995, w: W ? { x: W[i].x, y: W[i].y, z: W[i].z } : null }));
   const sideScore = s => ['sh', 'el', 'wr', 'hip', 'kn', 'an'].reduce((a, k) => a + P[SIDE_IDX[s][k]].v, 0);
   const side = sideScore('L') >= sideScore('R') ? 'L' : 'R';
   const S = {}, O = {};
@@ -59,6 +66,34 @@ export function makeFrame(raw, aspect, t) {
 export function missingParts(f, parts) {
   if (!f || !f.ok) return parts.slice();
   return parts.filter(k => { const p = f.S[k]; return !p || p.v < 0.5 || !p.inX || !p.inY; });
+}
+
+/** One Euro filter per coordinate: heavy smoothing when you're still (steady lines, steady
+ *  measurements), light smoothing when you move fast (no lag behind your body). */
+class OneEuro {
+  constructor(minCutoff = 1.2, beta = 0.6, dCutoff = 1.0) { this.mc = minCutoff; this.b = beta; this.dc = dCutoff; this.x = null; this.dx = 0; this.t = null; }
+  static a(cutoff, dt) { const r = 2 * Math.PI * cutoff * dt; return r / (r + 1); }
+  f(x, t) {
+    if (this.x == null || this.t == null) { this.x = x; this.t = t; this.dx = 0; return x; }
+    const dt = Math.max(1e-3, t - this.t); this.t = t;
+    const dx = (x - this.x) / dt;
+    this.dx += OneEuro.a(this.dc, dt) * (dx - this.dx);
+    const cutoff = this.mc + this.b * Math.abs(this.dx);
+    this.x += OneEuro.a(cutoff, dt) * (x - this.x);
+    return this.x;
+  }
+}
+export class EuroSmoother {
+  constructor(n = 33, dims = ['x', 'y', 'z'], minCutoff = 1.5, beta = 15) { this.dims = dims; this.fs = null; this.n = n; this.vis = null; this.mc = minCutoff; this.beta = beta; }
+  push(pts, t) {
+    if (!pts) { this.fs = null; this.vis = null; return null; }
+    if (!this.fs || this.fs.length !== pts.length) { this.fs = pts.map(() => this.dims.map(() => new OneEuro(this.mc, this.beta))); this.vis = pts.map(p => p.visibility ?? 1); }
+    return pts.map((p, i) => {
+      const o = {}; this.dims.forEach((k, j) => { o[k] = this.fs[i][j].f(p[k] ?? 0, t); });
+      this.vis[i] += 0.4 * ((p.visibility ?? 1) - this.vis[i]); o.visibility = this.vis[i];
+      return o;
+    });
+  }
 }
 
 /** Exponential smoothing of landmark streams (reduces jitter without much lag). */

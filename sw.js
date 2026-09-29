@@ -1,5 +1,5 @@
 // Offline cache: the pose model and app files load from the phone after the first visit.
-const CACHE = 'zuri-live-v1';
+const CACHE = 'zuri-live-v2';
 const CORE = ['./', 'index.html', 'js/app.js', 'js/camera.js', 'js/exercises.js', 'js/geom.js', 'js/program.js', 'js/fig.js', 'vendor/vision_bundle.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

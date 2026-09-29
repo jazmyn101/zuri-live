@@ -231,7 +231,7 @@ async function openLive(steps, meta) {
   try {
     if (window.__zuriSim) cam.startSim(window.__zuriSim);
     else {
-      await cam.load(m => { $('#lvLoadMsg').textContent = m; });
+      await cam.load(meta.kind === 'scan' ? 'heavy' : 'full', m => { $('#lvLoadMsg').textContent = m; });
       $('#lvLoadMsg').textContent = 'Starting the camera…';
       await cam.start(D.settings.facing);
     }
@@ -301,12 +301,44 @@ function renderStatic() {
     const id = s.kind === 'setup' || s.kind === 'photo' ? 'stand' : (w.test || w.ex);
     fig.show(id);
     $('#lvFig').hidden = s.kind === 'setup' || s.kind === 'photo';
+    $('#lvRest').style.justifyContent = s.kind === 'setup' ? 'flex-start' : '';
     $('#lvTip').textContent = s.kind === 'setup' ? s.tip : s.kind === 'photo' ? 'Hold still for a moment and I take the photo.' : ((EX[w.ex] && EX[w.ex].cam) || w.test ? setupTip(w.ex) : 'No camera needed for this one. Just listen for my count.');
   }
   $('#lvName').textContent = s.kind === 'rest' ? 'Up next: ' + (w.title || EX[w.ex].name) : s.kind === 'setup' ? 'Let me see you' : s.kind === 'photo' ? (s.view === 'front' ? 'Front photo' : 'Side photo') : (w.title || EX[w.ex].name);
   const ph = $('#lvPhase');
   ph.className = 'lv-phase' + (s.kind === 'work' ? ' work' : '');
   ph.textContent = s.kind === 'rest' ? s.label : s.kind === 'setup' ? 'Setup' : s.kind === 'photo' ? 'Photo' : ({ reps: 'Reps', hold: 'Hold', tempo: 'Follow my count', timed: 'Go', measure: 'Measuring', maxreps: 'Max reps', maxhold: 'Max hold', timedreps: 'As many as you can' })[s.mode];
+}
+
+/* Setup checklist: can Zuri see all of you, at a good size, in decent light? */
+function framing(f) {
+  const out = { head: false, hands: false, hips: false, feet: false, size: null, dark: false, ready: false, fix: null };
+  if (f && f.ok) {
+    const vis = i => f.P[i].v > 0.6 && f.P[i].inX && f.P[i].inY;
+    out.head = vis(0) || vis(7) || vis(8);
+    out.hands = vis(15) || vis(16);
+    out.hips = vis(23) || vis(24);
+    out.feet = vis(27) || vis(28);
+    const top = Math.min(f.P[0].y, f.P[11].y), bottom = Math.max(f.P[27].y, f.P[28].y);
+    out.size = bottom - top;                          // share of the picture height you fill, standing
+  }
+  const light = cam.light;
+  out.dark = light != null && light < 55;
+  const all = out.head && out.hands && out.hips && out.feet;
+  out.sizeOk = out.size != null && out.size > 0.4 && out.size < 0.95;
+  out.ready = all && out.sizeOk;
+  out.fix = !f || !f.ok ? 'I can\'t see you yet. Step into the picture, about two metres from the phone.'
+    : !out.feet ? 'Step back a little. I need to see your feet.'
+    : !out.head ? 'Move so your head is in the picture too.'
+    : !out.hands ? 'Keep your arms in the picture.'
+    : out.size != null && out.size <= 0.4 ? 'Come a bit closer. You should fill about two thirds of the screen height.'
+    : out.size != null && out.size >= 0.95 ? 'Step back a little. Leave some space above your head and below your feet.'
+    : out.dark ? 'It is a bit dark. Face a window or turn a light on so I can see you sharply.' : null;
+  return out;
+}
+function renderChecks(c) {
+  const item = (ok, label) => '<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-weight:700;font-size:15px;background:' + (ok ? '#4CCB8B' : 'rgba(255,255,255,.14)') + ';color:' + (ok ? '#04160C' : '#F3F7F4') + '">' + (ok ? '✓' : '·') + ' ' + label + '</span>';
+  $('#lvTip').innerHTML = '<div style="background:rgba(7,16,12,.72);border-radius:16px;padding:10px 12px"><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:8px">' + item(c.head, 'Head') + item(c.hands, 'Hands') + item(c.hips, 'Hips') + item(c.feet, 'Feet') + item(c.sizeOk, 'Distance') + item(!c.dark, 'Light') + '</div>' + esc(c.fix || 'Hold still…') + '</div>';
 }
 
 /* frames feed the trackers */
@@ -362,10 +394,12 @@ function tick() {
     for (let c = 3; c >= 1; c--) if (rem <= c && !L.said['b' + c]) { L.said['b' + c] = 1; beep(880, 0.09); }
     if (t >= s.dur) return next();
   } else if (s.kind === 'setup') {
-    const f = L.f, ok = f && f.ok && missingParts(f, s.need).length === 0;
-    L.steady = ok ? L.steady + dt : 0;
-    if (L.steady > 1.5) { say('Perfect. I can see all of you.'); return next(); }
-    if (t > 20 && !L.said.help) { L.said.help = 1; say(s.help); }
+    const c = framing(L.f);
+    renderChecks(c);
+    const allSeen = c.head && c.hands && c.hips && c.feet;
+    L.steady = (c.ready || (allSeen && t > 20)) ? L.steady + dt : 0;   // distance is advice, not a wall
+    if (L.steady > 2) { say(c.dark ? 'I can see all of you. More light would make me even more accurate.' : 'Perfect. I can see all of you clearly.'); return next(); }
+    if (t > 6 && c.fix && (!L.said.fixAt || L.total - L.said.fixAt > 9)) { L.said.fixAt = L.total; say(c.fix); }
   } else if (s.kind === 'photo') {
     const f = L.f, vis = f && f.ok && missingParts(f, ['ear', 'sh', 'hip', 'kn', 'an']).length === 0;
     const right = vis && (s.view === 'front' ? f.shoulderSpread > 0.5 : f.shoulderSpread < 0.4);
@@ -579,7 +613,7 @@ $('#sCopy').onclick = () => copyText(zuriSummary(), '#sCopied');
 function startScan() {
   const steps = [];
   const date = dkey(new Date());
-  steps.push({ kind: 'setup', dur: 10, need: ['sh', 'hip', 'kn', 'an'], text: 'Welcome to your body scan. Turn the phone on its side and prop it up at about hip height. Then step back until I can see all of you.', tip: 'Phone on its side at hip height, 2 to 3 metres away. Whole body in the picture, head to feet, even lying down.', help: 'Still looking for you. Step back until your head and feet are both in the picture.' });
+  steps.push({ kind: 'setup', dur: 10, need: ['sh', 'hip', 'kn', 'an'], text: 'Welcome to your body scan. Turn the phone on its side and prop it up at about hip height, about two metres away. Stand side-on to it, in good light, in fitted clothes if you can.', tip: 'Phone on its side at hip height, about 2 metres away. Good light, and fitted clothes help Zuri see your joints.', help: 'Still looking for you. Step back until your head and feet are both in the picture.' });
   if (D.settings.photos) { steps.push({ kind: 'photo', view: 'front', dur: 8 }); steps.push({ kind: 'photo', view: 'side', dur: 8 }); }
   SCAN.forEach((q, n) => {
     const ex = q.test === 'inversion' ? 'wall_handstand' : q.test;

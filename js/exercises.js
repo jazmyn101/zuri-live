@@ -1,8 +1,8 @@
 // Exercise catalog and the live trackers that watch them. Pure logic, no DOM.
 import { ang, incl, lineDev, dist, missingParts, Median } from './geom.js';
 
-const SIDE_TIP = 'Phone on its side, about hip height, 2 to 3 metres away. Train side-on to it so I see your whole body.';
-const FRONT_TIP = 'Phone on its side, 2 to 3 metres away. Face it, whole body in the picture.';
+const SIDE_TIP = 'Phone on its side, about hip height, about 2 metres away. Train side-on to it so I see your whole body.';
+const FRONT_TIP = 'Phone on its side, about 2 metres away. Face it, whole body in the picture.';
 
 /* ---------- shared checks ---------- */
 const elbow = f => ang(f.S.sh, f.S.el, f.S.wr);
