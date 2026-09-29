@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1310">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zuri Live">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" href="icon-192.png">
+<title>Zuri Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: phone-first, one column. Home and results are calm light pages; the live screen is a dark,
+   full-bleed camera view with numbers big enough to read from three metres away. */
+:root{
+  --bg:#EDF2EE; --surface:#FFFFFF; --surface2:#E0E9E2; --fg:#0E1F18; --muted:#52675B; --line:#C9D7CC;
+  --accent:#A86B00; --accent-ink:#FFFFFF; --accent-soft:#F5E6C4;
+  --good:#1B7A4B; --warn:#B23F2E; --lv1:#C9533F; --lv2:#D28A1E; --lv3:#6FA23A; --lv4:#1B7A4B;
+  --fig:#0E1F18; --figdim:#8CA093; --skin:#A5693F; --hair:#1A1210; --shirt:#1F8A5B;
+  --font-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --font-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0B1310; --surface:#13201A; --surface2:#1B2B24; --fg:#EAF1EB; --muted:#93A89C; --line:#25372E;
+    --accent:#F2B33D; --accent-ink:#1B1300; --accent-soft:#2D2510;
+    --good:#4CCB8B; --warn:#FF8A78; --lv1:#FF8A78; --lv2:#F2B33D; --lv3:#A9D46A; --lv4:#4CCB8B;
+    --fig:#EAF1EB; --figdim:#5D7367; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+.page{max-width:560px;margin-inline:auto;padding-inline:16px;padding-top:calc(env(safe-area-inset-top,0px) + 16px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 32px);display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.disp{font-family:var(--font-display);font-weight:700;line-height:.95;letter-spacing:.005em;text-wrap:balance}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.row{display:flex;align-items:center;gap:12px}
+.btn{min-height:56px;border-radius:16px;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;gap:10px;padding-inline:20px;text-align:center}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.secondary{background:var(--surface2);min-height:48px;font-size:16px}
+.btn svg{width:22px;height:22px}
+.linkbtn{font-weight:600;font-size:15px;color:var(--muted);text-decoration:underline;min-height:44px}
+.ib{width:44px;height:44px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;flex:none}
+.ib svg{width:22px;height:22px}
+
+/* coach avatar */
+.avatar{width:56px;height:56px;flex:none;border-radius:50%;overflow:hidden}
+.avatar svg{width:100%;height:100%;display:block}
+.avatar .eye{transform-box:fill-box;transform-origin:center;animation:blink 5s infinite}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.mouth-open{display:none}
+.speaking .mouth-open{display:block;transform-box:fill-box;transform-origin:center;animation:talk .28s infinite alternate}
+.speaking .mouth-closed{display:none}
+@keyframes talk{from{transform:scaleY(.4)}to{transform:scaleY(1.4)}}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;font-size:15px;line-height:1.45}
+
+/* welcome */
+.hero{padding-top:12px;display:flex;flex-direction:column;gap:14px}
+.hero h1{font-family:var(--font-display);font-size:64px;font-weight:700;line-height:.9}
+.steps{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)}
+.steps div{display:grid;grid-template-columns:40px 1fr;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.steps b{font-family:var(--font-display);font-size:28px;color:var(--accent);line-height:1}
+.note{font-size:14px;color:var(--muted);background:var(--surface2);border-radius:12px;padding:10px 12px}
+
+/* home */
+.head{display:flex;align-items:center;gap:12px}
+.head h1{font-family:var(--font-display);font-size:32px;line-height:1}
+.head .grow{flex:1;min-width:0}
+.today h2{font-size:46px}
+.meta{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.meta b{color:var(--fg)}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.wd{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.dot{width:100%;max-width:44px;aspect-ratio:1;border-radius:12px;background:var(--surface2);display:grid;place-items:center;border:2px solid transparent}
+.dot svg{width:18px;height:18px}
+.dot.done{background:var(--good);color:#fff}
+.dot.rest{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.dot.today{border-color:var(--accent)}
+.goal{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.goal b{font-weight:600;font-size:15px}
+.goal span{font-family:var(--font-display);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.meter{grid-column:1/-1;height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.focus{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-top:1px solid var(--line)}
+.focus:first-of-type{border-top:0;padding-top:0}
+.focus b{font-size:15px}
+.focus p{font-size:14px;color:var(--muted)}
+.tlist{display:flex;flex-direction:column}
+.trow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:0}
+.trow b{font-weight:600;font-size:15px}
+.trow .tv{font-family:var(--font-display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+.pips{display:flex;gap:4px}
+.pips i{width:9px;height:9px;border-radius:50%;background:var(--surface2);border:1px solid var(--line)}
+.pips i.on{background:var(--good);border-color:var(--good)}
+.tools{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.tool{min-height:64px;border-radius:14px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:600;font-size:15px;text-align:left}
+.tool svg{width:22px;height:22px;color:var(--accent);flex:none}
+
+/* scan results */
+.q{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.q:last-child{border-bottom:0}
+.q b{font-weight:600}
+.q .val{font-size:14px;color:var(--muted)}
+.lvl{display:flex;gap:3px;align-items:center;grid-row:span 2}
+.lvl i{width:14px;height:22px;border-radius:4px;background:var(--surface2)}
+.lvl[data-l="1"] i:nth-child(-n+1){background:var(--lv1)}
+.lvl[data-l="2"] i:nth-child(-n+2){background:var(--lv2)}
+.lvl[data-l="3"] i:nth-child(-n+3){background:var(--lv3)}
+.lvl[data-l="4"] i:nth-child(-n+4){background:var(--lv4)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.photos figure{margin:0;display:flex;flex-direction:column;gap:4px}
+.photos img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;background:var(--surface2)}
+.photos figcaption{font-size:12px;color:var(--muted);font-weight:600}
+
+/* summary */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--font-display);font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.loglist div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+.loglist div:last-child{border-bottom:0}
+.loglist span{font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.loglist .up{color:var(--good);font-weight:700}
+.loglist .down{color:var(--warn);font-weight:700}
+
+/* sheets */
+.sheet{position:fixed;inset:0;z-index:30;background:var(--bg);overflow-y:auto}
+.sheet .page{padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sheethead h2{font-family:var(--font-display);font-size:34px}
+.ghostb{min-height:44px;padding-inline:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:14px}
+.plan-day{display:flex;flex-direction:column;gap:6px}
+.plan-day h3{font-family:var(--font-display);font-size:26px;line-height:1}
+.plan-day p{font-size:14px;color:var(--muted)}
+.set-row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:52px;border-bottom:1px solid var(--line)}
+.set-row:last-child{border-bottom:0}
+.seg{display:grid;grid-template-columns:repeat(2,1fr);background:var(--surface2);border-radius:12px;padding:4px;gap:4px}
+.seg button{min-height:40px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted);padding-inline:10px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+/* live */
+.live{position:fixed;inset:0;z-index:20;background:#07100C;color:#F3F7F4;overflow:hidden;user-select:none;-webkit-user-select:none}
+.live canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.live video{position:absolute;width:2px;height:2px;opacity:0;pointer-events:none}
+.lv-top{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;background:linear-gradient(#07100Cdd,#07100C00)}
+.lv-top button{min-height:44px;padding-inline:14px;border-radius:12px;background:rgba(255,255,255,.12);font-weight:600;font-size:14px;color:#F3F7F4}
+.lv-info{text-align:center;min-width:0}
+.lv-info .eyebrow{color:#B9CCC0}
+.lv-info #lvSet{font-weight:600;font-size:15px}
+.lv-clock{font-variant-numeric:tabular-nums;font-weight:700;font-size:16px;min-width:44px;text-align:right;color:#F3F7F4}
+.lv-bar{position:absolute;left:14px;right:14px;top:calc(env(safe-area-inset-top,0px) + 62px);height:5px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.lv-bar i{display:block;height:100%;width:0;background:#F2B33D;transition:width .3s}
+.lv-status{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 80px);transform:translateX(-50%);max-width:calc(100% - 32px);background:#FF8A78;color:#1B0703;font-weight:700;font-size:17px;padding:10px 16px;border-radius:999px;text-align:center}
+.lv-bottom{position:absolute;left:0;right:0;bottom:0;padding:24px 16px calc(env(safe-area-inset-bottom,0px) + 16px);background:linear-gradient(#07100C00,#07100Cee 40%);display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.lv-phase{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.14)}
+.lv-phase.work{background:#F2B33D;color:#1B1300}
+.lv-phase.hold{background:#4CCB8B;color:#04160C}
+.lv-count{font-family:var(--font-display);font-weight:700;font-variant-numeric:tabular-nums;line-height:.85;display:flex;align-items:baseline;gap:10px}
+.lv-count #lvNum{font-size:min(34vw,210px);color:#F2B33D}
+.lv-count #lvOf{font-size:min(10vw,60px);color:#B9CCC0}
+.lv-name{font-family:var(--font-display);font-weight:700;font-size:min(9vw,52px);line-height:1;text-wrap:balance}
+.lv-cap{font-size:18px;line-height:1.35;color:#D6E3DA;max-width:34ch;min-height:2.7em}
+.lv-rest{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 84px);display:flex;flex-direction:column;gap:10px;align-items:center}
+.lv-fig{width:min(100%,420px);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:6px 8px;--fig:#EAF1EB;--figdim:#5D7367;--accent:#F2B33D}
+.lv-fig svg{display:block;width:100%;height:auto}
+.lv-tip{font-size:15px;color:#B9CCC0;text-align:center;max-width:40ch}
+.lv-hint{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 4px);text-align:center;font-size:12px;color:#7F968A}
+.lv-pause{position:absolute;inset:0;z-index:5;background:rgba(7,16,12,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px}
+.lv-pause h2{font-family:var(--font-display);font-size:56px}
+.lv-pause .btn{width:min(100%,340px)}
+.lv-pause .btn.secondary{background:rgba(255,255,255,.12);color:#F3F7F4}
+.lv-load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center}
+.lv-load h2{font-family:var(--font-display);font-size:40px}
+.spin{width:44px;height:44px;border-radius:50%;border:4px solid rgba(255,255,255,.15);border-top-color:#F2B33D;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .4s}
+.flash.on{opacity:.8;transition:none}
+@media (orientation: landscape){
+  /* camera on the left, numbers in their own column on the right, so text never covers your body */
+  .live canvas{right:38%;width:auto}
+  .lv-bottom{left:auto;right:0;width:38%;top:calc(env(safe-area-inset-top,0px) + 74px);bottom:0;justify-content:center;background:none;padding-top:0;gap:6px}
+  .lv-count #lvNum{font-size:min(30vh,190px)}
+  .lv-count #lvOf{font-size:min(9vh,56px)}
+  .lv-name{font-size:min(11vh,48px)}
+  .lv-cap{font-size:16px;min-height:0}
+  .lv-rest{right:38%;top:calc(env(safe-area-inset-top,0px) + 76px);bottom:24px;justify-content:center}
+  .lv-fig{width:min(100%,calc((100vh - 190px) * 1.6))}
+  .lv-status{left:31%;top:calc(env(safe-area-inset-top,0px) + 84px)}
+}
+@media (prefers-reduced-motion: reduce){.avatar .eye,.speaking .mouth-open,.spin{animation:none}}
+</style>
+</head>
+<body>
+
+<div id="boot" class="page"><p class="muted">Loading Zuri…</p></div>
+
+<!-- WELCOME -->
+<main id="welcome" class="page" hidden>
+  <div class="hero">
+    <div class="avatar" data-av></div>
+    <div class="eyebrow">Zuri Live</div>
+    <h1>Your coach can see you now.</h1>
+    <p class="muted">Turn your phone on its side, prop it up and train. Zuri watches through the camera, counts every rep, times every hold and tells you what to fix. No tapping.</p>
+  </div>
+  <div class="steps">
+    <div><b>1</b><span><strong>Body scan.</strong> About 12 minutes of simple tests: reach, fold, squat, push-ups, hollow hold, tuck L-sit and a handstand or pike hold.</span></div>
+    <div><b>2</b><span><strong>Your plan.</strong> Built from what the scan finds, aimed at your handstand, your L-sit and a lean, strong body.</span></div>
+    <div><b>3</b><span><strong>Train hands-free.</strong> Targets move up as you earn them. Rescan every 4 weeks.</span></div>
+  </div>
+  <p class="note">The camera feed stays on this phone. Nothing is uploaded. Your scans and training log are saved on this phone too.</p>
+  <label class="set-row" style="border:0"><span>Take progress photos during the scan<br><span class="small muted">Front and side, saved only on this phone</span></span><input type="checkbox" id="wPhotos" checked style="width:24px;height:24px;accent-color:var(--accent)"></label>
+  <button class="btn primary" id="wScan">Start my body scan</button>
+  <p class="small muted" id="wInstall">Tip: on iPhone, tap Share, then “Add to Home Screen” so Zuri opens full screen like an app.</p>
+</main>
+
+<!-- HOME -->
+<main id="home" class="page" hidden>
+  <div class="head">
+    <div class="avatar" data-av></div>
+    <div class="grow"><h1>Zuri Live</h1><p class="small muted" id="greet"></p></div>
+    <button class="ib" id="hSettings" aria-label="Settings"></button>
+  </div>
+  <div class="bubble" id="hBubble"></div>
+  <div class="card today" id="todayCard"></div>
+  <div class="card"><div class="eyebrow">This week</div><div class="week" id="week"></div></div>
+  <div class="card" id="goalCard"></div>
+  <div class="card" id="focusCard"></div>
+  <div class="card"><div class="row" style="justify-content:space-between"><div class="eyebrow">Skill targets</div><span class="small muted">Up after 2 sessions hitting every set</span></div><div class="tlist" id="tlist"></div></div>
+  <div class="tools">
+    <button class="tool" id="hPlan"></button>
+    <button class="tool" id="hPhotos"></button>
+    <button class="tool" id="hScan"></button>
+    <button class="tool" id="hCopy"></button>
+  </div>
+  <p class="small muted" id="hCopied" role="status"></p>
+</main>
+
+<!-- SCAN RESULTS -->
+<main id="results" class="page" hidden>
+  <div class="head"><div class="avatar" data-av></div><div class="grow"><div class="eyebrow" id="rDate">Body scan</div><h1 class="disp" style="font-size:40px">Here's where you are.</h1></div></div>
+  <div class="bubble" id="rBubble"></div>
+  <div class="card" id="rGoals"></div>
+  <div class="card" id="rFocus"></div>
+  <div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><div class="eyebrow">Your scan</div><div class="legend"><span>1 starting</span><span>2 building</span><span>3 solid</span><span>4 strong</span></div></div><div id="rList"></div></div>
+  <div class="card" id="rPhotos" hidden><div class="eyebrow">Progress photos</div><div class="photos" id="rPhotoGrid"></div></div>
+  <button class="btn primary" id="rDone">See my plan</button>
+</main>
+
+<!-- SESSION SUMMARY -->
+<main id="summary" class="page" hidden>
+  <div class="head"><div class="avatar" data-av></div><div class="grow"><div class="eyebrow" id="sDay"></div><h1 class="disp" style="font-size:44px" id="sTitle">Done.</h1></div></div>
+  <div class="bubble" id="sBubble"></div>
+  <div class="stats"><div class="stat"><b id="sMin">0</b><span>Minutes</span></div><div class="stat"><b id="sFull">0</b><span>Sets hit</span></div><div class="stat"><b id="sStreak">0</b><span>Day streak</span></div></div>
+  <div class="card" id="sChanges" hidden></div>
+  <div class="card"><div class="eyebrow">What Zuri logged</div><div class="loglist" id="sLog"></div></div>
+  <button class="btn primary" id="sHome">Back home</button>
+  <button class="btn secondary" id="sCopy">Copy for Coach Zuri</button>
+  <p class="small muted" id="sCopied" role="status"></p>
+</main>
+
+<!-- LIVE -->
+<section id="live" class="live" hidden>
+  <canvas id="cam" aria-label="Camera view with your tracked body"></canvas>
+  <video id="vid" playsinline muted></video>
+  <div class="lv-top">
+    <button id="lvEnd">End</button>
+    <div class="lv-info"><div class="eyebrow" id="lvBlock"></div><div id="lvSet"></div></div>
+    <div class="lv-clock" id="lvClock">0:00</div>
+  </div>
+  <div class="lv-bar"><i id="lvProg"></i></div>
+  <div class="lv-rest" id="lvRest" hidden>
+    <div class="lv-fig" id="lvFig"></div>
+    <div class="lv-tip" id="lvTip"></div>
+  </div>
+  <div class="lv-status" id="lvStatus" hidden></div>
+  <div class="lv-bottom">
+    <div class="lv-phase" id="lvPhase">Get ready</div>
+    <div class="lv-count"><span id="lvNum"></span><span id="lvOf"></span></div>
+    <div class="lv-name" id="lvName"></div>
+    <div class="lv-cap" id="lvCap" aria-live="polite"></div>
+  </div>
+  <div class="lv-hint">Tap anywhere to pause</div>
+  <div class="flash" id="lvFlash"></div>
+  <div class="lv-load" id="lvLoad" hidden><div class="spin"></div><h2 id="lvLoadTitle">Waking Zuri up</h2><p id="lvLoadMsg" style="color:#B9CCC0">The first time takes a little longer.</p></div>
+  <div class="lv-pause" id="lvPause" hidden>
+    <h2>Paused</h2>
+    <button class="btn primary" id="pResume">Resume</button>
+    <button class="btn secondary" id="pDone">I finished this set</button>
+    <button class="btn secondary" id="pSkip">Skip this</button>
+    <button class="btn secondary" id="pEnd">End and save</button>
+  </div>
+</section>
+
+<!-- PLAN SHEET -->
+<div class="sheet" id="planSheet" hidden><div class="page">
+  <div class="sheethead"><h2>Your week</h2><button class="ghostb" data-close>Close</button></div>
+  <p class="small muted" id="planNote"></p>
+  <div id="planDays" style="display:flex;flex-direction:column;gap:12px"></div>
+</div></div>
+
+<!-- PHOTOS SHEET -->
+<div class="sheet" id="photoSheet" hidden><div class="page">
+  <div class="sheethead"><h2>Progress photos</h2><button class="ghostb" data-close>Close</button></div>
+  <p class="small muted">Saved only on this phone. Same spot, same light each scan makes the change easy to see.</p>
+  <div id="photoBody" style="display:flex;flex-direction:column;gap:12px"></div>
+</div></div>
+
+<!-- SETTINGS SHEET -->
+<div class="sheet" id="setSheet" hidden><div class="page">
+  <div class="sheethead"><h2>Settings</h2><button class="ghostb" data-close>Close</button></div>
+  <div class="card">
+    <label class="set-row"><span>Zuri's voice</span><input type="checkbox" id="sVoice" style="width:24px;height:24px;accent-color:var(--accent)"></label>
+    <label class="set-row"><span>Beeps</span><input type="checkbox" id="sBeep" style="width:24px;height:24px;accent-color:var(--accent)"></label>
+    <div class="set-row"><span>Camera</span><div class="seg" id="sCam"><button data-v="user">Front</button><button data-v="environment">Back</button></div></div>
+  </div>
+  <p class="small muted">Front camera lets you see yourself on screen. The back camera is sharper if someone else is holding the phone.</p>
+  <div class="card">
+    <div class="eyebrow">Your data</div>
+    <p class="small muted">Everything lives on this phone. Copy a backup to keep it safe or move it to a new phone.</p>
+    <button class="btn secondary" id="sBackup">Copy backup</button>
+    <button class="btn secondary" id="sRestore">Restore from a pasted backup</button>
+    <textarea id="sRestoreBox" rows="4" hidden style="width:100%;font:inherit;font-size:14px;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg)" placeholder="Paste your backup here, then tap Restore again"></textarea>
+    <p class="small muted" id="sDataMsg" role="status"></p>
+  </div>
+</div></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
