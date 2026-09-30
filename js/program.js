@@ -115,19 +115,29 @@ const mobilityFocus = levels => ['shoulders', 'flex', 'squatMob'].sort((a, b) =>
 const B = (name, items, extra) => Object.assign({ name, items }, extra || {});
 const circuit = (name, l, exs) => ({ name, circuit: { rounds: 4, work: l >= 3 ? 40 : 30, rest: l >= 3 ? 20 : 30, roundRest: 60, items: exs } });
 
-export function buildPlan(levels) {
+/** A short, repeatable week: 4 sessions of about 40 minutes (or 3 if life is busy).
+ *  Skill work comes first while you're fresh, handstands get 3 short exposures a week because
+ *  skills grow with frequency, and every set should end with a rep or two left in the tank. */
+const finisher = (l, items) => ({ name: 'Finisher', circuit: { rounds: 3, work: l >= 3 ? 35 : 30, rest: 15, roundRest: 40, items } });
+export function buildPlan(levels, days) {
+  days = days === 3 ? 3 : 4;
   const L = k => levels[k] || 1;
   const mob = mobilityFocus(levels);
   const pushEasy = L('push') <= 1 ? 'knee_pushup' : 'pushup';
   const lighter = items => items.map(x => Object.assign({}, x, { sets: Math.max(2, x.sets - 1) }));
-  return {
-    1: { name: 'Handstand & Push', tags: ['Handstand', 'Push', 'Core'], blocks: [B('Warm-up', WARM_UP), B('Shoulder prep', [I('wall_slides', 1, 8, 0), I('puppy_stretch', 1, 30, 0)]), B('Handstand', hsHold(L('invert'))), B('Handstand strength', hsPush(L('push'))), B('Push', push(L('push'))), B('Core', core(L('core'))), B('Back line', [I('reverse_plank', 2, 20, 30), I('superman', 2, 10, 30)]), B('Cool-down', cooldown(['shoulders', mob[0]]))] },
-    2: { name: 'Legs & Core', tags: ['Legs', 'Core'], blocks: [B('Warm-up', WARM_LOW), B('Legs', legs(L('legs')).concat([I('calf_raise', 2, 15, 30)])), B('Compression', compression(L('flex'))), B('Core', [I(L('core') >= 3 ? 'hollow_rock' : 'dead_bug', 3, L('core') >= 3 ? 12 : 10, 30), I('plank', 2, 30, 30)]), B('Cool-down', cooldown(['flex', 'squatMob']))] },
-    3: { name: 'Move & Mobility', tags: ['Easy day', 'Mobility'], light: true, blocks: [B('Warm-up', WARM_LOW.slice(0, 2)), { name: 'Easy circuit', circuit: { rounds: 3, work: 30, rest: 30, roundRest: 45, items: ['jacks', 'squat', 'glute_bridge', 'high_knees'] } }, B('Mobility', cooldown(mob).concat(cooldown([mob[1]])).slice(0, 5).map(x => Object.assign({}, x, { sets: 2 })))] },
-    4: { name: 'L-sit & Handstand', tags: ['L-sit', 'Handstand'], blocks: [B('Warm-up', WARM_UP), B('L-sit', lsitWork(L('support'))), B('Handstand', lighter(hsHold(L('invert')))), B('Dips', dips(L('support'))), B('Compression', compression(L('flex'))), B('Core', core(L('core')).concat([I('superman', 2, 10, 30)])), B('Cool-down', cooldown(['flex', 'shoulders']))] },
-    5: { name: 'Full-Body Strength', tags: ['Push', 'Legs', 'Core'], blocks: [B('Warm-up', WARM_UP), B('Push', push(L('push'))), B('Legs', legs(L('legs'))), B('Support', lighter(lsitWork(L('support')))), B('Core', core(L('core')).concat([I('reverse_plank', 2, 20, 30)])), B('Cool-down', cooldown([mob[0]]))] },
-    6: { name: 'Burn & Play', tags: ['Conditioning', 'Skill play'], blocks: [B('Warm-up', WARM_LOW.slice(0, 2)), circuit('Conditioning', L('legs'), ['jacks', 'squat', 'mountain_climbers', pushEasy, 'high_knees']), B('Skill play', L('invert') >= 3 ? [I('kickup_practice', 1, 240, 30)] : [I('pike_hold', 3, 20, 40)]), B('Core', [I('dead_bug', 2, 10, 30)]), B('Cool-down', cooldown(mob))] }
+  const hsPlay = L('invert') >= 3 ? [I('kickup_practice', 1, 180, 30)] : [I('pike_hold', 2, 20, 40)];
+  const burn = finisher(L('legs'), ['jacks', 'squat', 'mountain_climbers', 'high_knees']);
+  const plan = {
+    1: { name: 'Handstand & Push', tags: ['Handstand', 'Push', 'Core'], blocks: [B('Warm-up', WARM_UP), B('Shoulder prep', [I('wall_slides', 1, 8, 0), I('puppy_stretch', 1, 30, 0)]), B('Handstand', hsHold(L('invert'))), B('Handstand strength', hsPush(L('push'))), B('Push', push(L('push'))), B('Core', core(L('core'))), B('Back line', [I('reverse_plank', 2, 20, 30), I('superman', 2, 10, 30), I('plank', 2, 30, 30)]), B('Cool-down', cooldown(['shoulders', mob[0]]))] },
+    2: { name: 'Legs & L-sit', tags: ['L-sit', 'Legs', 'Burn'], blocks: [B('Warm-up', WARM_LOW), B('L-sit', lsitWork(L('support'))), B('Legs', legs(L('legs')).slice(0, 3)), B('Compression', compression(L('flex'))), burn, B('Cool-down', cooldown(['flex', 'squatMob']))] },
+    3: { name: 'Handstand & L-sit', tags: ['Handstand', 'L-sit', 'Dips'], blocks: [B('Warm-up', WARM_UP), B('Handstand', hsHold(L('invert'))), B('L-sit', lighter(lsitWork(L('support')))), B('Dips', dips(L('support'))), B('Compression', compression(L('flex'))), B('Legs', [I('glute_bridge', 3, 15, 40), I('wall_sit', 2, [0, 30, 30, 40, 45][L('legs')], 45)]), B('Core', [I(L('core') >= 3 ? 'hollow_rock' : 'dead_bug', 3, L('core') >= 3 ? 12 : 10, 30)]), B('Cool-down', cooldown(['flex', 'shoulders']))] },
+    4: { name: 'Full Body & Burn', tags: ['Push', 'Legs', 'Burn'], blocks: [B('Warm-up', WARM_LOW.slice(0, 2).concat(WARM_UP.slice(1, 2))), B('Handstand play', hsPlay), B('Push', lighter(push(L('push')))), B('Legs', lighter(legs(L('legs')).slice(0, 2))), B('Support', [lsitWork(L('support'))[0]].map(x => Object.assign({}, x, { sets: 2 }))), B('Core', core(L('core')).concat([I('superman', 2, 10, 30)])), finisher(L('legs'), ['jacks', 'squat', 'mountain_climbers', pushEasy, 'high_knees']), B('Cool-down', cooldown(mob))] }
   };
+  if (days === 3) {                      // three sessions: the full-body day folds into session 3
+    plan[3].blocks.splice(plan[3].blocks.length - 1, 0, finisher(L('legs'), ['jacks', 'squat', pushEasy, 'high_knees']));
+    delete plan[4];
+  }
+  return plan;
 }
 
 /* ---------- targets and progression ---------- */

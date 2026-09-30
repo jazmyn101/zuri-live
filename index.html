@@ -220,7 +220,7 @@ h1,h2,h3,p{margin:0}
   <div class="steps">
     <div><b>1</b><span><strong>Body scan.</strong> About 12 minutes of simple tests: reach, fold, squat, push-ups, hollow hold, tuck L-sit and a handstand or pike hold.</span></div>
     <div><b>2</b><span><strong>Your plan.</strong> Built from what the scan finds, aimed at your handstand, your L-sit and a lean, strong body.</span></div>
-    <div><b>3</b><span><strong>Train hands-free.</strong> Targets move up as you earn them. Rescan every 4 weeks.</span></div>
+    <div><b>3</b><span><strong>Train hands-free, 4 days a week.</strong> About 40 minutes, any days that suit you. Targets move up as you earn them. Rescan every 4 weeks.</span></div>
   </div>
   <p class="note">The camera feed stays on this phone. Nothing is uploaded. Your scans and training log are saved on this phone too.</p>
   <label class="set-row" style="border:0"><span>Take progress photos during the scan<br><span class="small muted">Front and side, saved only on this phone</span></span><input type="checkbox" id="wPhotos" checked style="width:24px;height:24px;accent-color:var(--accent)"></label>
@@ -237,7 +237,7 @@ h1,h2,h3,p{margin:0}
   </div>
   <div class="bubble" id="hBubble"></div>
   <div class="card today" id="todayCard"></div>
-  <div class="card"><div class="eyebrow">This week</div><div class="week" id="week"></div></div>
+  <div class="card"><div class="row" style="justify-content:space-between"><div class="eyebrow">This week</div><span class="small muted" id="weekCount"></span></div><div class="week" id="week"></div></div>
   <div class="card" id="goalCard"></div>
   <div class="card" id="focusCard"></div>
   <div class="card"><div class="row" style="justify-content:space-between"><div class="eyebrow">Skill targets</div><span class="small muted">Up after 2 sessions hitting every set</span></div><div class="tlist" id="tlist"></div></div>
@@ -265,7 +265,7 @@ h1,h2,h3,p{margin:0}
 <main id="summary" class="page" hidden>
   <div class="head"><div class="avatar" data-av></div><div class="grow"><div class="eyebrow" id="sDay"></div><h1 class="disp" style="font-size:44px" id="sTitle">Done.</h1></div></div>
   <div class="bubble" id="sBubble"></div>
-  <div class="stats"><div class="stat"><b id="sMin">0</b><span>Minutes</span></div><div class="stat"><b id="sFull">0</b><span>Sets hit</span></div><div class="stat"><b id="sStreak">0</b><span>Day streak</span></div></div>
+  <div class="stats"><div class="stat"><b id="sMin">0</b><span>Minutes</span></div><div class="stat"><b id="sFull">0</b><span>Sets hit</span></div><div class="stat"><b id="sStreak">0</b><span>This week</span></div></div>
   <div class="card" id="sChanges" hidden></div>
   <div class="card"><div class="eyebrow">What Zuri logged</div><div class="loglist" id="sLog"></div></div>
   <button class="btn primary" id="sHome">Back home</button>
@@ -308,7 +308,7 @@ h1,h2,h3,p{margin:0}
 
 <!-- PLAN SHEET -->
 <div class="sheet" id="planSheet" hidden><div class="page">
-  <div class="sheethead"><h2>Your week</h2><button class="ghostb" data-close>Close</button></div>
+  <div class="sheethead"><h2>Your program</h2><button class="ghostb" data-close>Close</button></div>
   <p class="small muted" id="planNote"></p>
   <div id="planDays" style="display:flex;flex-direction:column;gap:12px"></div>
 </div></div>
@@ -326,6 +326,7 @@ h1,h2,h3,p{margin:0}
   <div class="card">
     <label class="set-row"><span>Zuri's voice</span><input type="checkbox" id="sVoice" style="width:24px;height:24px;accent-color:var(--accent)"></label>
     <label class="set-row"><span>Beeps</span><input type="checkbox" id="sBeep" style="width:24px;height:24px;accent-color:var(--accent)"></label>
+    <div class="set-row"><span>Sessions a week</span><div class="seg" id="sDays"><button data-v="3">3</button><button data-v="4">4</button></div></div>
     <div class="set-row"><span>Camera</span><div class="seg" id="sCam"><button data-v="user">Front</button><button data-v="environment">Back</button></div></div>
   </div>
   <p class="small muted">Front camera lets you see yourself on screen. The back camera is sharper if someone else is holding the phone.</p>

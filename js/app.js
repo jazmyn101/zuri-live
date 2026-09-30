@@ -95,43 +95,49 @@ function openSheet(id) { $('#' + id).hidden = false; }
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { b.closest('.sheet').hidden = true; });
 
 /* ================= home ================= */
-let sel = new Date().getDay();
-function streak() {
-  let n = 0; const d = new Date(); d.setHours(12, 0, 0, 0);
-  if (!D.hist[dkey(d)]) d.setDate(d.getDate() - 1);
-  for (let i = 0; i < 400; i++) { const k = dkey(d); if (D.hist[k]) n++; else if (d.getDay() !== 0) break; d.setDate(d.getDate() - 1); }
-  return n;
+// Sessions rotate in order (1, 2, 3, 4) on whatever days suit you. Sunday stays a rest day.
+const nSessions = () => Object.keys(D.plan || {}).length || 4;
+const weekStart = () => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; };
+const thisWeek = () => { const ws = dkey(weekStart()); return D.log.filter(s => s.completed && s.date >= ws); };
+function nextSession() {
+  const done = thisWeek(), n = nSessions();
+  if (!done.length) return 1;
+  const last = done[done.length - 1];
+  const k = last.dayKey || (Object.keys(D.plan).find(x => D.plan[x].name === last.name) | 0);
+  return (k % n) + 1;
 }
+let sel = null;
+function streak() { return thisWeek().length; }
 function homeLine() {
-  const sc = latestScan(), dow = new Date().getDay();
+  const sc = latestScan(), dow = new Date().getDay(), done = thisWeek().length, n = nSessions();
   if (sc && daysSince(sc.date) >= RESCAN_DAYS) return 'It has been ' + daysSince(sc.date) + ' days since your last scan. Rescan this week and let us see what changed.';
   if (dow === 0) return 'Sunday. Full rest. No training, no screens. Come back tomorrow.';
+  if (done >= n) return 'Week done: ' + n + ' of ' + n + '. Rest up and go build. I will be here Monday.';
+  if (D.hist[dkey(new Date())]) return 'You already trained today. Recovery is part of the plan.';
   const last = D.log[D.log.length - 1];
   if (last && last.changes && last.changes.some(c => c.dir === 'up')) return 'Last time you earned a new target. Today we make it feel normal.';
-  if (DN[dow] === 'Wednesday') return 'Easy day. Move, open up, breathe. This is where recovery happens.';
-  return pick(['Phone up, side-on, and let me see you. I count, you move.', 'Two reps in the tank on every set. Strong, not wrecked.', 'Show up, move well, go home. That is the whole plan.']);
+  return pick(['About forty minutes, then back to the grind. I count, you move.', 'Two reps in the tank on every set. Strong, not wrecked.', 'Show up, move well, get on with your day. That is the whole plan.']);
 }
 function renderHome() {
   if (!D.plan) { show('welcome'); return; }
-  const h = new Date().getHours(), now = new Date();
+  const n = nSessions();
+  if (sel == null || !D.plan[sel]) sel = nextSession();
+  const h = new Date().getHours(), now = new Date(), done = thisWeek().length;
   $('#greet').textContent = (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening') + ', Jazzy';
   $('#hBubble').textContent = homeLine();
-  // today
-  const card = $('#todayCard');
-  const chips = '<div class="row" style="flex-wrap:wrap;gap:6px">' + [1, 2, 3, 4, 5, 6].map(d => '<button class="ghostb" data-d="' + d + '" aria-pressed="' + (sel === d) + '" style="' + (sel === d ? 'background:var(--fg);color:var(--bg);border-color:var(--fg)' : '') + '">' + DN[d].slice(0, 3) + '</button>').join('') + '</div>';
-  if (sel === 0) {
-    card.innerHTML = '<div class="eyebrow">Today · Sunday</div><h2 class="disp">Rest day</h2><p class="muted">No workout, no screens. Recover like you train.</p><div class="eyebrow">Or train another day</div>' + chips;
-  } else {
-    const day = D.plan[sel], st = buildSteps(day, D.T);
-    card.innerHTML = '<div><div class="eyebrow">' + (sel === now.getDay() ? 'Today · ' : '') + DN[sel] + '</div><h2 class="disp" style="margin-top:6px">' + esc(day.name) + '</h2></div>' +
-      '<div class="meta"><span><b>' + minutes(st) + '</b> min</span><span><b>' + st.filter(s => s.kind === 'work').length + '</b> sets</span><span>' + day.tags.join(' · ') + '</span></div>' +
-      '<button class="btn primary" id="btnStart">' + ICON.play + 'Start with Zuri</button>' +
-      '<details><summary class="linkbtn" style="list-style:none;cursor:pointer;display:flex;align-items:center">See the full plan</summary><div class="loglist">' +
-      day.blocks.map(b => '<div><b style="font-weight:600">' + esc(b.name) + '</b><span>' + (b.circuit ? b.circuit.rounds + ' rounds · ' + b.circuit.work + 's on, ' + b.circuit.rest + 's off' : b.items.map(it => EX[it.ex].name + ' ' + (it.sets > 1 ? it.sets + '×' : '') + valText(it.ex, (D.T[it.ex] || it).v)).join(' · ')) + '</span></div>').join('') +
-      '</div></details><div class="eyebrow">Train a different day</div>' + chips;
-    $('#btnStart').onclick = () => startSession(sel);
-  }
+  // next session
+  const card = $('#todayCard'), nxt = nextSession();
+  const chips = '<div class="row" style="flex-wrap:wrap;gap:6px">' + Object.keys(D.plan).map(k => +k).map(d => '<button class="ghostb" data-d="' + d + '" aria-pressed="' + (sel === d) + '" style="' + (sel === d ? 'background:var(--fg);color:var(--bg);border-color:var(--fg)' : '') + '">Session ' + d + '</button>').join('') + '</div>';
+  const day = D.plan[sel], st = buildSteps(day, D.T);
+  card.innerHTML = '<div><div class="eyebrow">' + (now.getDay() === 0 ? 'Sunday is rest · ' : '') + (sel === nxt ? 'Next up · ' : '') + 'Session ' + sel + ' of ' + n + '</div><h2 class="disp" style="margin-top:6px">' + esc(day.name) + '</h2></div>' +
+    '<div class="meta"><span><b>' + minutes(st) + '</b> min</span><span><b>' + st.filter(s => s.kind === 'work').length + '</b> sets</span><span>' + day.tags.join(' · ') + '</span></div>' +
+    '<button class="btn primary" id="btnStart">' + ICON.play + 'Start with Zuri</button>' +
+    '<details><summary class="linkbtn" style="list-style:none;cursor:pointer;display:flex;align-items:center">See the full session</summary><div class="loglist">' +
+    day.blocks.map(b => '<div><b style="font-weight:600">' + esc(b.name) + '</b><span>' + (b.circuit ? b.circuit.rounds + ' rounds · ' + b.circuit.work + 's on, ' + b.circuit.rest + 's off' : b.items.map(it => EX[it.ex].name + ' ' + (it.sets > 1 ? it.sets + '×' : '') + valText(it.ex, (D.T[it.ex] || it).v)).join(' · ')) + '</span></div>').join('') +
+    '</div></details><div class="eyebrow">Or pick a session</div>' + chips;
+  $('#btnStart').onclick = () => startSession(sel);
   card.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { sel = +b.dataset.d; renderHome(); });
+  $('#weekCount').textContent = done + ' of ' + n + ' sessions';
   // week
   const monOff = (now.getDay() + 6) % 7, mon = new Date(now); mon.setHours(12, 0, 0, 0); mon.setDate(mon.getDate() - monOff);
   $('#week').innerHTML = Array.from({ length: 7 }, (_, i) => {
@@ -157,7 +163,7 @@ function renderHome() {
   show('home');
 }
 $('#hSettings').innerHTML = ICON.gear;
-$('#hPlan').innerHTML = ICON.plan + 'My week';
+$('#hPlan').innerHTML = ICON.plan + 'My program';
 $('#hPhotos').innerHTML = ICON.photo + 'Progress photos';
 $('#hScan').innerHTML = ICON.scan + 'Rescan';
 $('#hCopy').innerHTML = ICON.copy + 'Copy for Coach Zuri';
@@ -169,11 +175,11 @@ $('#hSettings').onclick = () => { renderSettings(); openSheet('setSheet'); };
 $('#wScan').onclick = () => { D.settings.photos = $('#wPhotos').checked; save(); startScan(); };
 
 function renderPlanSheet() {
-  const sc = latestScan();
-  $('#planNote').textContent = 'Built from your ' + (sc ? sc.date : '') + ' scan. Each set should end with about two reps left in you. Wednesday is an easy day, Sunday is rest.';
-  $('#planDays').innerHTML = [1, 2, 3, 4, 5, 6].map(d => {
+  const sc = latestScan(), n = nSessions();
+  $('#planNote').textContent = 'Built from your ' + (sc ? sc.date : '') + ' scan. ' + n + ' sessions a week, in order, on any days that suit you. Try not to do three days in a row. Every set should end with a rep or two left in you. Sunday is rest.';
+  $('#planDays').innerHTML = Object.keys(D.plan).map(d => {
     const day = D.plan[d], st = buildSteps(day, D.T);
-    return '<div class="card plan-day"><div class="eyebrow">' + DN[d] + ' · ' + minutes(st) + ' min</div><h3>' + esc(day.name) + '</h3>' +
+    return '<div class="card plan-day"><div class="eyebrow">Session ' + d + ' · about ' + minutes(st) + ' min</div><h3>' + esc(day.name) + '</h3>' +
       day.blocks.map(b => '<p><b style="color:var(--fg)">' + esc(b.name) + ':</b> ' + (b.circuit ? b.circuit.rounds + ' rounds of ' + b.circuit.items.map(e => EX[e].name).join(', ') + ' (' + b.circuit.work + 's on, ' + b.circuit.rest + 's off)' : b.items.map(it => EX[it.ex].name + ' ' + it.sets + '×' + valText(it.ex, (D.T[it.ex] || it).v)).join(', ')) + '</p>').join('') + '</div>';
   }).join('') + '<div class="card plan-day"><div class="eyebrow">Sunday</div><h3>Rest</h3><p>No training, no screens.</p></div>';
 }
@@ -191,10 +197,18 @@ async function renderPhotos() {
 function renderSettings() {
   $('#sVoice').checked = D.settings.voice; $('#sBeep').checked = D.settings.beep;
   $('#sCam').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === D.settings.facing));
+  $('#sDays').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === (D.settings.days || 4)));
 }
 $('#sVoice').onchange = e => { D.settings.voice = e.target.checked; save(); };
 $('#sBeep').onchange = e => { D.settings.beep = e.target.checked; save(); };
 $('#sCam').querySelectorAll('button').forEach(b => b.onclick = () => { D.settings.facing = b.dataset.v; save(); renderSettings(); });
+$('#sDays').querySelectorAll('button').forEach(b => b.onclick = () => { setDays(+b.dataset.v); renderSettings(); });
+function setDays(n) {
+  D.settings.days = n === 3 ? 3 : 4;
+  const sc = latestScan();
+  if (sc) { D.plan = buildPlan(sc.levels, D.settings.days); D.T = seedTargets(D.plan, D.T); }
+  sel = null; save(); renderHome();
+}
 $('#sBackup').onclick = () => copyText(JSON.stringify(D), '#sDataMsg', 'Backup copied. Paste it into your notes to keep it safe.');
 $('#sRestore').onclick = () => {
   const box = $('#sRestoreBox');
@@ -575,7 +589,7 @@ function finishSession(run) {
     const r = progress(D.T, sets); D.T = r.T; changes = r.changes;
     const date = run.date, day = D.plan[run.dayKey];
     const faults = {}; sets.forEach(s => (s.faults || []).forEach(f => { faults[f] = (faults[f] || 0) + 1; }));
-    D.log.push({ date, day: DN[run.started.getDay()], name: day.name, completed, mins, full: sets.filter(s => s.how === 'full').length, total: sets.length,
+    D.log.push({ date, dayKey: +run.dayKey, day: DN[run.started.getDay()], name: day.name, completed, mins, full: sets.filter(s => s.how === 'full').length, total: sets.length,
       short: sets.filter(s => s.how === 'short').map(s => EX[s.ex].name + ' ' + s.done + '/' + s.target), changes, faults: Object.keys(faults).sort((a, b) => faults[b] - faults[a]).slice(0, 3), sets });
     D.log = D.log.slice(-90);
     if (completed) D.hist[date] = true;
@@ -586,7 +600,7 @@ function finishSession(run) {
   $('#sDay').textContent = day.name;
   $('#sTitle').textContent = completed ? 'Done. That was work.' : 'Saved what you did.';
   const main = sets.filter(s => s.block !== 'Warm-up' && s.block !== 'Cool-down');
-  $('#sMin').textContent = mins; $('#sFull').textContent = main.filter(s => s.how === 'full').length + '/' + main.length; $('#sStreak').textContent = streak();
+  $('#sMin').textContent = mins; $('#sFull').textContent = main.filter(s => s.how === 'full').length + '/' + main.length; $('#sStreak').textContent = streak() + '/' + nSessions(); sel = null;
   const ups = changes.filter(c => c.dir === 'up'), downs = changes.filter(c => c.dir === 'down');
   $('#sChanges').hidden = !changes.length;
   $('#sChanges').innerHTML = '<div class="eyebrow">Targets changed</div><div class="loglist">' + changes.map(c => '<div>' + EX[c.ex].name + '<span class="' + c.dir + '">' + valText(c.ex, c.from) + ' → ' + valText(c.ex, c.to) + '</span></div>').join('') + '</div>';
@@ -636,7 +650,7 @@ function finishScan(run) {
   const measured = SCAN.filter(q => run.res[q.key] && run.res[q.key].value != null).length;
   if (!measured && !prev) { renderHome(); show(D.plan ? 'home' : 'welcome'); return; }
   D.scans.push({ date: run.date, results, levels, photos: !!run.photos });
-  D.plan = buildPlan(levels);
+  D.plan = buildPlan(levels, D.settings.days || 4);
   D.T = seedTargets(D.plan, D.T);
   save();
   renderResults(D.scans[D.scans.length - 1], prev);
@@ -666,6 +680,8 @@ $('#rDone').onclick = () => { renderPlanSheet(); renderHome(); openSheet('planSh
 /* ================= boot ================= */
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 if (window.navigator.standalone || matchMedia('(display-mode: standalone)').matches) $('#wInstall').hidden = true;
+if (!D.settings.days) D.settings.days = 4;
+if (D.plan && Object.keys(D.plan).length !== D.settings.days && latestScan()) { D.plan = buildPlan(latestScan().levels, D.settings.days); D.T = seedTargets(D.plan, D.T); save(); }
 $('#boot').hidden = true;
 renderHome();
 window.__zuri = { get D() { return D; }, get L() { return L; }, renderHome, startScan, startSession, save, next: () => next() };

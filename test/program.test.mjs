@@ -4,11 +4,14 @@ let fails = 0; const check = (n, c, i) => { console.log((c ? 'PASS ' : 'FAIL ') 
 for (const lv of [1, 2, 3, 4]) {
   const levels = { shoulders: lv, flex: lv, squatMob: lv, push: lv, core: lv, support: lv, invert: lv, legs: lv };
   const plan = buildPlan(levels), T = seedTargets(plan, {});
-  const mins = [1, 2, 3, 4, 5, 6].map(d => minutes(buildSteps(plan[d], T)));
+  const mins = Object.keys(plan).map(d => minutes(buildSteps(plan[d], T)));
+  const p3 = buildPlan(levels, 3), T3 = seedTargets(p3, {}), m3 = Object.keys(p3).map(d => minutes(buildSteps(p3[d], T3)));
+  check('level ' + lv + ': 3-day plan has 3 sessions of 28-50 min', Object.keys(p3).length === 3 && m3.every(m => m >= 28 && m <= 50), m3);
   const bad = []; for (const d in plan) plan[d].blocks.forEach(b => (b.items || []).concat(b.circuit ? b.circuit.items.map(ex => ({ ex })) : []).forEach(it => { if (!EX[it.ex]) bad.push(it.ex); }));
   check('level ' + lv + ': every exercise exists', bad.length === 0, bad);
-  check('level ' + lv + ': main days 24-45 min, easy day 18-28', mins.every((m, i) => i === 2 ? m >= 18 && m <= 28 : m >= 24 && m <= 45), mins);
-  check('level ' + lv + ': Wednesday is the lightest', mins[2] <= Math.min(...mins), mins);
+  check('level ' + lv + ': 4 sessions of 28-47 min', mins.length === 4 && mins.every(m => m >= 28 && m <= 47), mins);
+  const hsDays = Object.keys(plan).filter(d => plan[d].blocks.some(b => (b.items || []).some(it => ['wall_handstand', 'pike_hold', 'kickup_practice'].includes(it.ex)))).length;
+  check('level ' + lv + ': handstand practice 3 times a week', hsDays === 3, hsDays);
 }
 const lv = { shoulders: levelOf('shoulders', { value: 150 }), flex: levelOf('flex', { value: 0.5 }), squatMob: levelOf('squatMob', { value: 80, extra: { hipBelow: false } }), push: levelOf('push', { value: 9, variant: 'full' }), core: levelOf('core', { value: 18 }), support: levelOf('support', { value: 4 }), invert: levelOf('invert', { value: 25, variant: 'pike' }), legs: levelOf('legs', { value: 28 }) };
 check('levels from sample scan', JSON.stringify(lv) === JSON.stringify({ shoulders: 2, flex: 2, squatMob: 2, push: 3, core: 2, support: 2, invert: 1, legs: 3 }), lv);
